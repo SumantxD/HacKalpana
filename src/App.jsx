@@ -1,6 +1,8 @@
 import React from "react";
 import AgoraRTC from "agora-rtc-sdk-ng"
 import { useRef, useState, useEffect } from "react";
+import axios from "axios"
+
 
 
 export default function App() {
@@ -8,7 +10,7 @@ export default function App() {
   let options = {
     appId: "4871916f1508465c9d097ec220d87697",
     channel: "sumant",
-    token: "007eJxTYJgTqXTPboX93tpM0XM3tsWZGX4o2LB6onj8yjvaziqikRsUGEwszA0tDc3SDE0NLEzMTJMtUwwszVOTjYwMUizMzSzNXZddSW4IZGQ4veQZAyMUgvhsDMWluYl5JQwMAEDsH6Q=",
+    token: "007eJxTYNjptOqysvO/r1Usecyd7J0G05efkbfYGlu0y0Eit7GS11yBwcTC3NDS0CzN0NTAwsTMNNkyxcDSPDXZyMggxcLczNL8fMrV5IZARgZ1nyRmRgYIBPHZGIpLcxPzShgYAMYkHTE=",
     uid: 0,
   };
 
@@ -20,11 +22,16 @@ export default function App() {
     remoteUid: null,
   };
 
+  //for sharing and blocking client's video stream
+  var isMuteVideo = false;
+  var isMuteAudio = false;
+
   //we will create our refs here
 
   const agoraEngine = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
   //we have created the remote player conatiner //and local player container manually 
   //all we need to do is to refer it
+  const [files, setFiles] = useState(null);
 
   // const remotePlayerContainer = document.createElement("div");
   const remotePlayerContainer = useRef(null);
@@ -43,6 +50,20 @@ export default function App() {
     // remotePlayerContainer.current.style.width = "640px";
     // remotePlayerContainer.current.style.height = "480px";
     remotePlayerContainer.current.style.padding = "3px";
+
+    //in case the browser has blocked the audio/video playback
+    AgoraRTC.onAutoplayFailed = () => {
+        // Create button for the user interaction.
+        const btn = document.createElement("button");
+        // Set the button text.
+        btn.innerText = "Click me to resume the audio/video playback";
+        // Remove the button when onClick event occurs.
+        btn.onClick = () => {
+            btn.remove();
+        };
+        // Append the button to the UI.
+        document.body.append(btn);
+    }
 
 
     agoraEngine.on("user-published", async (user, mediaType) => {
@@ -118,6 +139,34 @@ export default function App() {
     window.location.reload();
   };
 
+  let toggleVideo = async function () {
+    if(isMuteVideo == false) {
+        // Mute the local video.
+        channelParameters.localVideoTrack.setEnabled(false);
+        // Update the button text.
+        // document.getElementById(`muteVideo`).innerHTML = "Unmute Video";
+        isMuteVideo = true;
+    } else {
+        // Unmute the local video.
+        channelParameters.localVideoTrack.setEnabled(true);
+        // Update the button text.
+        // document.getElementById(`muteVideo`).innerHTML = "Mute Video";
+        isMuteVideo = false;
+    }
+  }
+
+  let toggleAudio = async function () {
+    if(isMuteAudio == false) {
+        isMuteAudio = true;
+        agoraEngine.muteLocalAudioStream(isMuteAudio);
+        agoraEngine.muteAllRemoteAudioStreams(isMuteAudio);
+      } else {
+        isMuteAudio = false;
+        agoraEngine.muteLocalAudioStream(isMuteAudio);
+        agoraEngine.muteAllRemoteAudioStreams(isMuteAudio);
+    }
+  }
+
   useEffect(() => {
     startBasicCall();
   }, []);
@@ -142,6 +191,7 @@ export default function App() {
         <div className=" flex bg-slate-400">
           <div ref={remotePlayerContainer} className="  bg-slate-200 w-1/2 mx-auto mt-10 h-[450px] border-2 border-dashed border-slate-700 relative left-[87px]"> 
           </div>
+          {/* <input type="text" id="textbox"/> */}
           <div ref={localPlayerContainer} className=" bg-slate-800 w-44 h-44 border-2 border-dashed rounded-md mt-10 relative right-[55px]">
           </div>
         </div>
@@ -149,8 +199,10 @@ export default function App() {
           <div className=" bg-slate-300 w-1/2 mx-auto mt-2 flex justify-around">
 
               <button onClick={() => {leaveStream()}} className='border-2 border-slate-700 rounded-md p-2 m-2 text-slate-700 font-mono font-semibold bg-slate-400'>Leave stream</button>
-              <button className='border-2 border-slate-700 rounded-md p-2 m-2 text-slate-700 font-mono font-semibold bg-slate-400'>Mic On</button>
-              <button className='border-2 border-slate-700 rounded-md p-2 m-2 text-slate-700 font-mono font-semibold bg-slate-400'>Camera On</button>
+              <button onClick={() => {toggleAudio()}} className='border-2 border-slate-700 rounded-md p-2 m-2 text-slate-700 font-mono font-semibold bg-slate-400'>Mic On</button>
+              <button onClick={() => {toggleVideo()}} className='border-2 border-slate-700 rounded-md p-2 m-2 text-slate-700 font-mono font-semibold bg-slate-400'>Camera On</button>
+              <input type="file" className=" border-2 border-slate-700 rounded-md p-2 m-2 text-slate-700 font-mono font-semibold bg-slate-400"/>
+              <button onChange={(e) => {setFiles(e.target.files[0])}} className='border-2 border-slate-700 rounded-md p-2 m-2 text-slate-700 font-mono font-semibold bg-slate-400'>Upload</button>
 
           </div>
       </div>
